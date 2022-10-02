@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/jaeger"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
@@ -26,7 +27,8 @@ func (h *HttpA) StartServer(environment, serviceName, version string) {
 	L.PanicIf(err, `jeager.New`)
 	// only from go 1.18 -buildvcs
 	tracerProvider := tracesdk.NewTracerProvider(
-		tracesdk.WithBatcher(exporter), // use batch on production
+		tracesdk.WithBatcher(exporter),
+		tracesdk.WithSampler(tracesdk.AlwaysSample()), // use ProbabilitySampler on production
 		tracesdk.WithResource(resource.NewWithAttributes(
 			semconv.SchemaURL,
 			semconv.ServiceNameKey.String(serviceName),
@@ -46,11 +48,8 @@ func (h *HttpA) StartServer(environment, serviceName, version string) {
 		}
 	}(ctx)
 
-	// not sure what this used for
-	//otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
-	//	propagation.TraceContext{},
-	//	propagation.Baggage{},
-	//))
+	// will propagate trace-ID to next request properly
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
 
 	// tracer := tracerProvider.Tracer("httpA") // equal to otel.Tracer("httpA")
 
@@ -98,6 +97,8 @@ func (h *HttpA) StartServer(environment, serviceName, version string) {
 		time.Sleep(6 * time.Millisecond)
 		submoduleA.SomeFuncA(ctx)
 		time.Sleep(4 * time.Millisecond)
+
+		// r.Header.Get(`traceparent`) // will get traceparent from previous request
 
 		_, _ = w.Write([]byte(`post /test happened`))
 		w.WriteHeader(http.StatusOK)
