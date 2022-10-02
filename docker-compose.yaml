@@ -1,0 +1,7 @@
+version: '3'
+services:
+  jaeger:
+    image: jaegertracing/all-in-one
+    ports:
+      - "16686:16686"
+      - "14268:14268"
