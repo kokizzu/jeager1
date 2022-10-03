@@ -19,7 +19,7 @@ grpcurl -plaintext -d '{"name":"BBB"}' 127.0.0.1:3001 GrpcB.GetSomething
 
 open [localhost:16686](http://localhost:16686) to see the trace.
 
-![image](https://user-images.githubusercontent.com/1061610/193476979-5412abdd-d2ef-44b6-993d-68356b680565.png)
+![image](https://user-images.githubusercontent.com/1061610/193477550-a8e1b58e-1f5f-46c3-bcb9-0f866c05c15f.png)
 
 ## TODO
 
