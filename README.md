@@ -25,5 +25,5 @@ open [localhost:16686](http://localhost:16686) to see the trace.
 
 ## TODO
 
-- log all request and response
+- log all request and response payload
 - nats
