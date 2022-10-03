@@ -21,6 +21,8 @@ open [localhost:16686](http://localhost:16686) to see the trace.
 
 ![image](https://user-images.githubusercontent.com/1061610/193477550-a8e1b58e-1f5f-46c3-bcb9-0f866c05c15f.png)
 
+![image](https://user-images.githubusercontent.com/1061610/193554547-f3f931e9-35ef-481f-8d80-0769175f289e.png)
+
 ## TODO
 
 - grpc
