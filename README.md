@@ -6,8 +6,15 @@ Since most of the examples on the internet already outdated (jeager client and o
 
 ```shell
 docker-compose up -d
+
+# http example
 go run main.go httpA
 curl -v localhost:3000
+
+# grpc example
+go run main.go grpcB
+grpcurl -plaintext 127.0.0.1:3001 list
+grpcurl -plaintext -d '{"name":"BBB"}' 127.0.0.1:3001 GrpcB.GetSomething 
 ```
 
 open [localhost:16686](http://localhost:16686) to see the trace.

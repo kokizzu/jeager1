@@ -6,6 +6,7 @@ import (
 	"runtime/debug"
 
 	"github.com/kokizzu/gotro/S"
+	"jeager1/grpcB"
 	"jeager1/httpA"
 )
 
@@ -41,7 +42,10 @@ func main() {
 		server := httpA.HttpA{}
 		server.StartServer(DEPLOY_ENV, mode, GetVersion())
 	case `grpcB`:
-		//server := grpcB.GrpcB{}
-
+		server := grpcB.GrpcB{}
+		server.StartServer(DEPLOY_ENV, mode, GetVersion())
+	case `natsC`:
+		server := grpcB.GrpcB{}
+		server.StartServer(DEPLOY_ENV, mode, GetVersion())
 	}
 }

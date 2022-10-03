@@ -1,0 +1,31 @@
+syntax = "proto3";
+option go_package = "jeager1/grpcB";
+
+service GrpcB {
+  rpc GetSomething(GetSomethingRequest) returns (GetSomethingResponse) {}
+  rpc PostAnything(PostAnythingRequest) returns (PostAnythingResponse) {}
+}
+
+message GetSomethingRequest {
+  optional string name = 1;
+}
+
+message GetSomethingResponse {
+  optional string value = 1;
+}
+
+message PostAnythingRequest {
+  optional string name = 1;
+}
+
+message PostAnythingResponse {
+  optional string value = 1;
+}
+/*
+
+# to regenerate server
+go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28
+go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
+protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative example.proto
+*/
+ 
