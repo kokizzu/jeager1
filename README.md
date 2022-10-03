@@ -25,5 +25,5 @@ open [localhost:16686](http://localhost:16686) to see the trace.
 
 ## TODO
 
-- grpc
+- log all request and response
 - nats

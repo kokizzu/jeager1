@@ -2,6 +2,7 @@ package natsC
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"time"
@@ -15,11 +16,12 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	"go.opentelemetry.io/otel/trace"
 )
 
-type natsC struct{}
+type NatsC struct{}
 
-func (n *natsC) StartServer(environment, serviceName, version string) {
+func (n *NatsC) StartServer(environment, serviceName, version string) {
 	exporter, err := jaeger.New(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint("http://localhost:14268/api/traces")))
 	L.PanicIf(err, `jeager.New`)
 	// only from go 1.18 -buildvcs
@@ -33,6 +35,7 @@ func (n *natsC) StartServer(environment, serviceName, version string) {
 			semconv.ServiceVersionKey.String(version),
 		)),
 	)
+
 	otel.SetTracerProvider(tracerProvider)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -75,23 +78,56 @@ func (n *natsC) StartServer(environment, serviceName, version string) {
 	// TODO: check this for embedding
 	// https://dev.to/karanpratapsingh/embedding-nats-in-go-19o
 
-	subject := "my-subject"
+	const topic1 = "my-topic1"
+	const topic2 = "my-topic2"
 
-	// Subscribe to the subject
-	_, err = nc.QueueSubscribe(subject, "my-queue", func(msg *nats.Msg) {
-		// Print message data
+	// Subscribe to the topic1
+	_, err = nc.QueueSubscribe(topic1, "my-queue", func(msg *nats.Msg) {
+		rsc := msg.Header.Get(`otelTrace`)
+		parentSpanCtx := trace.SpanContext{}
+		err := json.Unmarshal([]byte(rsc), &parentSpanCtx)
+		L.IsError(err, `json.Unmarshal`)
+		_, span := otel.Tracer(`natsC`).Start(trace.ContextWithRemoteSpanContext(context.Background(), parentSpanCtx), topic1)
+		defer span.End()
+
 		data := string(msg.Data)
 		fmt.Println(data)
-		err := msg.Respond(msg.Data)
+		err = msg.Respond(msg.Data)
 		L.IsError(err, `msg.Respond`) // ignore error
 	})
 
-	// Publish data to the subject
-	msg, err := nc.Request(subject, []byte("Hello embedded NATS!"), 2*time.Second)
-	if L.IsError(err, `nc.Publish`) {
-		return
-	}
-	log.Println(`reply:`, msg)
+	_, err = nc.QueueSubscribe(topic2, "my-queue", func(msg *nats.Msg) {
+		rsc := msg.Header.Get(`otelTrace`)
+		parentSpanCtx := trace.SpanContext{}
+		err := json.Unmarshal([]byte(rsc), &parentSpanCtx)
+		L.IsError(err, `json.Unmarshal`)
+		_, span := otel.Tracer(`natsC`).Start(trace.ContextWithRemoteSpanContext(context.Background(), parentSpanCtx), topic2)
+		defer span.End()
+
+		// Print message data
+		data := string(msg.Data)
+		fmt.Println(data)
+		err = msg.Respond(msg.Data)
+		L.IsError(err, `msg.Respond`) // ignore error
+	})
+
+	// Publish data to the topic1
+	go func() {
+		_, span := otel.Tracer("natsC").Start(context.Background(), "publish")
+		defer span.End()
+
+		spanCtx := span.SpanContext()
+		spanJson, _ := spanCtx.MarshalJSON()
+		msg, err := nc.RequestMsg(&nats.Msg{
+			Subject: topic1, Data: []byte("whatever"), Header: nats.Header{
+				"otelTrace": []string{string(spanJson)},
+			},
+		}, 2*time.Second)
+		if L.IsError(err, `nc.Publish`) {
+			return
+		}
+		log.Println(`reply:`, msg)
+	}()
 
 	// Wait for server shutdown
 	ns.WaitForShutdown()

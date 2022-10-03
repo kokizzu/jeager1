@@ -8,6 +8,7 @@ import (
 	"github.com/kokizzu/gotro/S"
 	"jeager1/grpcB"
 	"jeager1/httpA"
+	"jeager1/natsC"
 )
 
 func GetVersion() string {
@@ -45,7 +46,7 @@ func main() {
 		server := grpcB.GrpcB{}
 		server.StartServer(DEPLOY_ENV, mode, GetVersion())
 	case `natsC`:
-		server := grpcB.GrpcB{}
+		server := natsC.NatsC{}
 		server.StartServer(DEPLOY_ENV, mode, GetVersion())
 	}
 }
