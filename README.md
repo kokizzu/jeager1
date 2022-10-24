@@ -1,8 +1,8 @@
 
 # jeager1
 
-This is example how to use jeager to trace between services.
-Since most of the examples on the internet already outdated (jeager client and opentracing deprecated).
+This is example how to use jaeger (typo '__') to trace between services.
+Since most of the examples on the internet already outdated (deprecated jaager client or deprecated opentracing library).
 
 ```shell
 docker-compose up -d
