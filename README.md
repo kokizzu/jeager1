@@ -1,8 +1,8 @@
 
 # jeager1
 
-This is example how to use jeager to trace between services.
-Since most of the examples on the internet already outdated (jeager client and opentracing deprecated).
+This is example how to use jaeger to trace between services.
+Since most of the examples on the internet already outdated (jaeger client and opentracing deprecated).
 
 ```shell
 docker-compose up -d
@@ -15,6 +15,9 @@ curl -v localhost:3000
 go run main.go grpcB
 grpcurl -plaintext 127.0.0.1:3001 list
 grpcurl -plaintext -d '{"name":"BBB"}' 127.0.0.1:3001 GrpcB.GetSomething 
+
+# nats example, will publish a message when server start
+go run main.go natsC 
 ```
 
 open [localhost:16686](http://localhost:16686) to see the trace.
@@ -26,4 +29,8 @@ open [localhost:16686](http://localhost:16686) to see the trace.
 ## TODO
 
 - log all request and response payload
-- nats
+
+
+## Special Thanks
+
+- [thetooth](https://github.com/thetooth) - fixing NATS traceID/spanID problem

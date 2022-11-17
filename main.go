@@ -5,10 +5,11 @@ import (
 	"os"
 	"runtime/debug"
 
-	"github.com/kokizzu/gotro/S"
 	"jeager1/grpcB"
 	"jeager1/httpA"
 	"jeager1/natsC"
+
+	"github.com/kokizzu/gotro/S"
 )
 
 func GetVersion() string {
@@ -21,6 +22,8 @@ func GetVersion() string {
 var DEPLOY_ENV = `development`
 
 func main() {
+
+	fmt.Println(debug.ReadBuildInfo())
 	if len(os.Args) <= 1 {
 		fmt.Println(`usage:
 ` + os.Args[0] + ` httpA|grpcB|natsC`)

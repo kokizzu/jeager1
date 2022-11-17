@@ -2,10 +2,11 @@ package natsC
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"time"
+
+	"jeager1/natsC/submoduleC"
 
 	"github.com/kokizzu/gotro/L"
 	"github.com/nats-io/nats-server/v2/server"
@@ -16,12 +17,11 @@ import (
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 	"go.opentelemetry.io/otel/trace"
-	"jeager1/natsC/submoduleC"
 )
 
 type NatsC struct{}
 
-const otelTraceHeader = `otelTrace`
+const otelTraceSpanIdPair = `otelTraceSpanIdPair`
 
 func (n *NatsC) StartServer(environment, serviceName, version string) {
 	exporter, err := jaeger.New(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint("http://localhost:14268/api/traces")))
@@ -85,7 +85,9 @@ func (n *NatsC) StartServer(environment, serviceName, version string) {
 
 	// Subscribe to the topic1
 	_, err = nc.QueueSubscribe(topic1, "my-queue", func(msg *nats.Msg) {
-		ctx, span := otel.Tracer(`natsC`).Start(getParentContext(topic1, msg), topic1)
+		ctx, span := otel.Tracer(`natsC`).Start(createRemoteCtxFromHeader(topic1, msg), topic1,
+			trace.WithSpanKind(trace.SpanKindServer),
+		)
 		defer span.End()
 
 		submoduleC.SomeFuncC(ctx)
@@ -100,7 +102,9 @@ func (n *NatsC) StartServer(environment, serviceName, version string) {
 	})
 
 	_, err = nc.QueueSubscribe(topic2, "my-queue", func(msg *nats.Msg) {
-		ctx, span := otel.Tracer(`natsC`).Start(getParentContext(topic2, msg), topic2)
+		ctx, span := otel.Tracer(`natsC`).Start(createRemoteCtxFromHeader(topic2, msg), topic2,
+			trace.WithSpanKind(trace.SpanKindServer),
+		)
 		defer span.End()
 
 		submoduleC.SomeFuncC(ctx)
@@ -122,11 +126,15 @@ func sendMessage(nc *nats.Conn, topic string, payload string, ctx context.Contex
 	_, span := otel.Tracer("natsC").Start(ctx, "publish")
 	defer span.End()
 	spanCtx := span.SpanContext()
-	spanJson, _ := spanCtx.MarshalJSON()
-	log.Println(string(spanJson))
+	traceId := spanCtx.TraceID().String()
+	spanId := spanCtx.SpanID().String()
+	log.Println(traceId, spanId)
 	msg, err := nc.RequestMsg(&nats.Msg{
 		Subject: topic, Data: []byte(payload), Header: nats.Header{
-			otelTraceHeader: []string{string(spanJson)},
+			otelTraceSpanIdPair: []string{
+				traceId,
+				spanId,
+			},
 		},
 	}, 2*time.Second)
 	if L.IsError(err, `nc.Publish`) {
@@ -136,13 +144,26 @@ func sendMessage(nc *nats.Conn, topic string, payload string, ctx context.Contex
 	return string(msg.Data)
 }
 
-func getParentContext(topic string, msg *nats.Msg) context.Context {
-	rsc := msg.Header.Get(otelTraceHeader)
-	log.Println(topic, rsc)
-	parentSpanCtx := trace.SpanContext{}
-	err := json.Unmarshal([]byte(rsc), &parentSpanCtx)
-	if L.IsError(err, `json.Unmarshal`) {
-		return context.Background()
+func createRemoteCtxFromHeader(topic string, msg *nats.Msg) (spanContext context.Context) {
+	traceSpanIdPair := msg.Header.Values(otelTraceSpanIdPair)
+	log.Println(topic, traceSpanIdPair)
+	if len(traceSpanIdPair) != 2 {
+		spanContext = context.Background()
+		return
 	}
-	return trace.ContextWithRemoteSpanContext(context.Background(), parentSpanCtx)
+
+	traceID, err := trace.TraceIDFromHex(traceSpanIdPair[0])
+	L.IsError(err, `TraceIDFromHex`)
+	var spanID trace.SpanID
+	spanID, err = trace.SpanIDFromHex(traceSpanIdPair[1])
+	L.IsError(err, `SpanIDFromHex`)
+
+	var spanContextConfig trace.SpanContextConfig
+	spanContextConfig.TraceID = traceID
+	spanContextConfig.SpanID = spanID
+	spanContextConfig.TraceFlags = 01
+	spanContextConfig.Remote = true
+	parentSpanCtx := trace.NewSpanContext(spanContextConfig)
+	spanContext = trace.ContextWithRemoteSpanContext(context.Background(), parentSpanCtx)
+	return
 }

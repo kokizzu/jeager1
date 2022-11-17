@@ -90,19 +90,20 @@ func (h *HttpA) StartServer(environment, serviceName, version string) {
 		w.WriteHeader(http.StatusOK)
 	})))
 
-	mux.Handle("/test", otelhttp.WithRouteTag("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx, span := otel.Tracer("httpA").Start(ctx, "POST /test")
-		defer span.End()
+	mux.Handle("/test", otelhttp.WithRouteTag("/", http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			ctx, span := otel.Tracer("httpA").Start(ctx, "POST /test")
+			defer span.End()
 
-		time.Sleep(6 * time.Millisecond)
-		submoduleA.SomeFuncA(ctx)
-		time.Sleep(4 * time.Millisecond)
+			time.Sleep(6 * time.Millisecond)
+			submoduleA.SomeFuncA(ctx)
+			time.Sleep(4 * time.Millisecond)
 
-		// r.Header.Get(`traceparent`) // will get traceparent from previous request
+			// r.Header.Get(`traceparent`) // will get traceparent from previous request
 
-		_, _ = w.Write([]byte(`post /test happened`))
-		w.WriteHeader(http.StatusOK)
-	})))
+			_, _ = w.Write([]byte(`post /test happened`))
+			w.WriteHeader(http.StatusOK)
+		})))
 
 	log.Fatal(http.ListenAndServe(":3000", otelhttp.NewHandler(&mux, "server",
 		otelhttp.WithMessageEvents(otelhttp.ReadEvents, otelhttp.WriteEvents),
