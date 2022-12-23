@@ -2,7 +2,7 @@
 # jeager1
 
 This is example how to use jaeger (typo '__') to trace between services.
-Since most of the examples on the internet already outdated (deprecated jaager client or deprecated opentracing library).
+Since most of the examples on the internet already outdated (deprecated jaeger client or deprecated opentracing library).
 
 ```shell
 docker-compose up -d
@@ -25,6 +25,8 @@ open [localhost:16686](http://localhost:16686) to see the trace.
 ![image](https://user-images.githubusercontent.com/1061610/193477550-a8e1b58e-1f5f-46c3-bcb9-0f866c05c15f.png)
 
 ![image](https://user-images.githubusercontent.com/1061610/193554547-f3f931e9-35ef-481f-8d80-0769175f289e.png)
+
+![image](https://user-images.githubusercontent.com/1061610/202473625-522ced0e-ec91-4882-a42c-0649d82fd49d.png)
 
 ## TODO
 
