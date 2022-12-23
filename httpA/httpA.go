@@ -17,6 +17,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+
 	"jeager1/httpA/submoduleA"
 )
 
@@ -101,8 +102,48 @@ func (h *HttpA) StartServer(environment, serviceName, version string) {
 
 			// r.Header.Get(`traceparent`) // will get traceparent from previous request
 
+			traceparent := r.Header.Get(`traceparent`) // will get traceparent from previous request
+			L.Describe(traceparent)
+
 			_, _ = w.Write([]byte(`post /test happened`))
 			w.WriteHeader(http.StatusOK)
+		})))
+
+	mux.Handle("/traceparent-check", otelhttp.WithRouteTag("/", http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			ctx, span := otel.Tracer("httpA").Start(ctx, "GET /traceparent-check")
+			defer span.End()
+
+			time.Sleep(6 * time.Millisecond)
+			time.Sleep(4 * time.Millisecond)
+
+			traceparent := r.Header.Get(`traceparent`) // will get traceparent from previous request
+
+			ourTrace, _ := span.SpanContext().MarshalJSON()
+
+			client := http.Client{Transport: otelhttp.NewTransport(http.DefaultTransport)}
+			req, err := http.NewRequestWithContext(ctx, "POST", `http://localhost:3000/test`, strings.NewReader(`{"key":"value"}`))
+			L.IsError(err, `http.NewRequest`)
+			_, err = client.Do(req)
+			L.IsError(err, `client.Do`)
+
+			_, _ = w.Write([]byte(`post /test happened with ` + traceparent + ` and ` + string(ourTrace)))
+			w.WriteHeader(http.StatusOK)
+
+			// how to check:
+			/*
+				go run main.go httpA
+
+				curl http://localhost:3000/traceparent-check \
+				-H 'Traceparent: 00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01'
+
+				// why it overwrites traceparent?
+				post /test happened with 00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01 and {"TraceID":"2832edc7a5417ba68e87fb4b3894ff6c","SpanID":"fdfa88d6832f8a61","TraceFlags":"01","TraceState":"","Remote":false}
+
+				// log from /test
+				"00-2832edc7a5417ba68e87fb4b3894ff6c-3af33997a3fbea8b-01"
+
+			*/
 		})))
 
 	log.Fatal(http.ListenAndServe(":3000", otelhttp.NewHandler(&mux, "server",
