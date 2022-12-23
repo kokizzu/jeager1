@@ -103,7 +103,9 @@ func (h *HttpA) StartServer(environment, serviceName, version string) {
 			// r.Header.Get(`traceparent`) // will get traceparent from previous request
 
 			traceparent := r.Header.Get(`traceparent`) // will get traceparent from previous request
-			L.Describe(traceparent)
+			tracestate := r.Header.Get(`tracestate`)
+			ourTrace, _ := span.SpanContext().MarshalJSON()
+			L.Describe(traceparent, tracestate, string(ourTrace))
 
 			_, _ = w.Write([]byte(`post /test happened`))
 			w.WriteHeader(http.StatusOK)
@@ -114,9 +116,7 @@ func (h *HttpA) StartServer(environment, serviceName, version string) {
 			ctx, span := otel.Tracer("httpA").Start(ctx, "GET /traceparent-check")
 			defer span.End()
 
-			time.Sleep(6 * time.Millisecond)
-			time.Sleep(4 * time.Millisecond)
-
+			time.Sleep(5 * time.Millisecond)
 			traceparent := r.Header.Get(`traceparent`) // will get traceparent from previous request
 
 			ourTrace, _ := span.SpanContext().MarshalJSON()
@@ -137,12 +137,12 @@ func (h *HttpA) StartServer(environment, serviceName, version string) {
 				curl http://localhost:3000/traceparent-check \
 				-H 'Traceparent: 00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01'
 
-				// why it overwrites traceparent?
-				post /test happened with 00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01 and {"TraceID":"2832edc7a5417ba68e87fb4b3894ff6c","SpanID":"fdfa88d6832f8a61","TraceFlags":"01","TraceState":"","Remote":false}
+				// received properly
+				post /test happened with 00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01 and {"TraceID":"4db6e89b9d0f5cce699ab3bee9022e60","SpanID":"8aaba233dfa73840","TraceFlags":"01","TraceState":"","Remote":false}
 
 				// log from /test
-				"00-2832edc7a5417ba68e87fb4b3894ff6c-3af33997a3fbea8b-01"
-
+				"00-4db6e89b9d0f5cce699ab3bee9022e60-735403388675709d-01"
+				"{"TraceID":"9a8561c47f92b1fdaa4977d4dc9291d3","SpanID":"fd3cdf685296b62b","TraceFlags":"01","TraceState":"","Remote":false}"
 			*/
 		})))
 
