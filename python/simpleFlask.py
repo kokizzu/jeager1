@@ -51,6 +51,7 @@ def another_route():
     carrier = get_carrier_traceparent(request)
     ctx = TraceContextTextMapPropagator().extract(carrier)
     with tracer.start_as_current_span("another_route", context=ctx):
+        # more info here: https://opentelemetry.io/docs/instrumentation/python/manual/#add-attributes-to-a-span
         current_span = trace.get_current_span()
         current_span.set_attribute("testing", 1)
         return "from another route"
@@ -60,6 +61,7 @@ def another_route():
 def root_route():
     with tracer.start_as_current_span("root_route"):
         # from: https://lightstep.com/blog/opentelemetry-for-python-the-hard-way
+        # example hitting another endpoint:
         carrier = {}
         TraceContextTextMapPropagator().inject(carrier)
         headers = {"traceparent": carrier["traceparent"]}
