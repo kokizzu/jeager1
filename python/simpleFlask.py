@@ -73,6 +73,6 @@ def root_route():
         )
         return "Hello World! " + requested.text
 
-
+# example modified from: https://github.com/open-telemetry/opentelemetry-python/tree/main/docs/examples/datadog_exporter --> replace Datadog with standard HTTP TraceParent
 if __name__ == "__main__":
     app.run()
