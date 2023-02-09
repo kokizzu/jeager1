@@ -19,3 +19,5 @@ curl http://localhost:5000
 ```
 
 open jaeger UI: http://localhost:16686
+
+![image](https://user-images.githubusercontent.com/1061610/217779376-c9531e08-1d37-493e-b321-8f05e142f1e9.png)
