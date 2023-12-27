@@ -28,7 +28,7 @@ func (n *NatsC) StartServer(environment, serviceName, version string) {
 	//exporter, err := jaeger.New(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint("http://localhost:14268/api/traces")))
 	//L.PanicIf(err, `jeager.New`)
 
-	exporter, err := otlptracehttp.New(context.Background(), otlptracehttp.WithEndpoint(`http://localhost:4318`))
+	exporter, err := otlptracehttp.New(context.Background(), otlptracehttp.WithEndpoint(`localhost:4318`))
 	L.PanicIf(err, `otlptracehttp.New`)
 
 	// only from go 1.18 -buildvcs
