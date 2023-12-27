@@ -44,8 +44,7 @@ func (g *GrpcB) GetSomething(ctx context.Context, request *GetSomethingRequest) 
 
 	conn, err := grpc.Dial(`127.0.0.1:3001`,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()),
-		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor()),
+		grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
 	)
 	if L.IsError(err, `grpc.Dial`) {
 		return nil, err
@@ -95,8 +94,7 @@ func (g *GrpcB) StartServer(environment, serviceName, version string) {
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
 
 	server := grpc.NewServer(
-		grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor()),
-		grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor()),
+		grpc.StatsHandler(otelgrpc.NewServerHandler()),
 	)
 
 	exampleService := &GrpcB{}

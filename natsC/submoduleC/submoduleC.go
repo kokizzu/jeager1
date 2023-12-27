@@ -11,6 +11,7 @@ import (
 func SomeFuncC(ctx context.Context) {
 	// otel.Tracer will use tracer that set last from otel.SetTracerProvider
 	ctx, span := otel.Tracer("submoduleC").Start(ctx, "SomeFuncC")
+	_ = ctx
 
 	// any attribute, eg. total records after query, response/code from 3rdParty
 	span.SetAttributes(attribute.Key("key3").String("value3"))
