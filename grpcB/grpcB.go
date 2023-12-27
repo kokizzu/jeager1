@@ -6,12 +6,13 @@ import (
 	"net"
 	"time"
 
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+
 	"jeager1/grpcB/submoduleB"
 
 	"github.com/kokizzu/gotro/L"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/jaeger"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
@@ -65,8 +66,12 @@ func (g *GrpcB) GetSomething(ctx context.Context, request *GetSomethingRequest) 
 }
 
 func (g *GrpcB) StartServer(environment, serviceName, version string) {
-	exporter, err := jaeger.New(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint("http://localhost:14268/api/traces")))
-	L.PanicIf(err, `jeager.New`)
+	//exporter, err := jaeger.New(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint("http://localhost:14268/api/traces")))
+	//L.PanicIf(err, `jeager.New`)
+
+	exporter, err := otlptracehttp.New(context.Background(), otlptracehttp.WithEndpoint(`http://localhost:4318`))
+	L.PanicIf(err, `otlptracehttp.New`)
+
 	// only from go 1.18 -buildvcs
 	tracerProvider := tracesdk.NewTracerProvider(
 		tracesdk.WithBatcher(exporter),

@@ -9,23 +9,31 @@ import (
 	"time"
 
 	"github.com/kokizzu/gotro/L"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/jaeger"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
+	"jeager1/grpcB"
 	"jeager1/httpA/submoduleA"
 )
 
 type HttpA struct{}
 
 func (h *HttpA) StartServer(environment, serviceName, version string) {
-	exporter, err := jaeger.New(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint("http://localhost:14268/api/traces")))
-	L.PanicIf(err, `jeager.New`)
+	//exporter, err := jaeger.New(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint("http://localhost:14268/api/traces")))
+	//L.PanicIf(err, `jeager.New`)
+
+	exporter, err := otlptracehttp.New(context.Background(), otlptracehttp.WithEndpoint(`http://localhost:4318`))
+	L.PanicIf(err, `otlptracehttp.New`)
+
 	// only from go 1.18 -buildvcs
 	tracerProvider := tracesdk.NewTracerProvider(
 		tracesdk.WithBatcher(exporter),
@@ -109,6 +117,31 @@ func (h *HttpA) StartServer(environment, serviceName, version string) {
 
 			_, _ = w.Write([]byte(`post /test happened`))
 			w.WriteHeader(http.StatusOK)
+		})))
+
+	mux.Handle(`/try-http2grpc`, otelhttp.WithRouteTag("/", http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			ctx, span := otel.Tracer("httpA").Start(ctx, "GET /try-http2grpc")
+			defer span.End()
+
+			conn, err := grpc.Dial(`127.0.0.1:3001`,
+				grpc.WithTransportCredentials(insecure.NewCredentials()),
+				grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
+			)
+			if L.IsError(err, `grpc.Dial`) {
+				return
+			}
+
+			grpcClient := grpcB.NewGrpcBClient(conn)
+			res, err := grpcClient.PostAnything(ctx, &grpcB.PostAnythingRequest{
+				Name: &[]string{`http2grpc`}[0],
+			})
+			if L.IsError(err, `grpcClient.PostAnything`) {
+				return
+			}
+
+			L.Print(`http2grpcB.PostAnything: `, res.GetValue())
+			_, _ = w.Write([]byte(`http2grpcB.PostAnything: ` + res.GetValue()))
 		})))
 
 	mux.Handle("/traceparent-check", otelhttp.WithRouteTag("/", http.HandlerFunc(
