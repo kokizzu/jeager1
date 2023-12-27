@@ -99,7 +99,7 @@ func (h *HttpA) StartServer(environment, serviceName, version string) {
 		w.WriteHeader(http.StatusOK)
 	})))
 
-	mux.Handle("/test", otelhttp.WithRouteTag("/", http.HandlerFunc(
+	mux.Handle("/test", otelhttp.WithRouteTag("/test", http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			ctx, span := otel.Tracer("httpA").Start(ctx, "POST /test")
 			defer span.End()
@@ -119,7 +119,7 @@ func (h *HttpA) StartServer(environment, serviceName, version string) {
 			w.WriteHeader(http.StatusOK)
 		})))
 
-	mux.Handle(`/try-http2grpc`, otelhttp.WithRouteTag("/", http.HandlerFunc(
+	mux.Handle(`/try-http2grpc`, otelhttp.WithRouteTag("/try-http2grpc", http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			ctx, span := otel.Tracer("httpA").Start(ctx, "GET /try-http2grpc")
 			defer span.End()
@@ -140,11 +140,18 @@ func (h *HttpA) StartServer(environment, serviceName, version string) {
 				return
 			}
 
+			// how to test this:
+			/*
+				go run main.go httpA
+				go run main.go grpcB
+				curl -v localhost:3000/try-http2grpc
+			*/
+
 			L.Print(`http2grpcB.PostAnything: `, res.GetValue())
 			_, _ = w.Write([]byte(`http2grpcB.PostAnything: ` + res.GetValue()))
 		})))
 
-	mux.Handle("/traceparent-check", otelhttp.WithRouteTag("/", http.HandlerFunc(
+	mux.Handle("/traceparent-check", otelhttp.WithRouteTag("/traceparent-check", http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			ctx, span := otel.Tracer("httpA").Start(ctx, "GET /traceparent-check")
 			defer span.End()
