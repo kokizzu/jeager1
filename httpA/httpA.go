@@ -63,7 +63,13 @@ func (h *HttpA) StartServer(environment, serviceName, version string) {
 	// tracer := tracerProvider.Tracer("httpA") // equal to otel.Tracer("httpA")
 
 	var mux http.ServeMux
-	mux.Handle("/", otelhttp.WithRouteTag("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	tracedRoute := func(operation string, handler http.HandlerFunc) http.Handler {
+		return otelhttp.NewHandler(handler, operation,
+			otelhttp.WithMessageEvents(otelhttp.ReadEvents, otelhttp.WriteEvents),
+		)
+	}
+
+	mux.Handle("/", tracedRoute("GET /", func(w http.ResponseWriter, r *http.Request) {
 		ctx, span := otel.Tracer("httpA").Start(ctx, "GET /")
 		defer span.End()
 
@@ -97,9 +103,9 @@ func (h *HttpA) StartServer(environment, serviceName, version string) {
 
 		_, _ = w.Write([]byte(`test 123`))
 		w.WriteHeader(http.StatusOK)
-	})))
+	}))
 
-	mux.Handle("/test", otelhttp.WithRouteTag("/test", http.HandlerFunc(
+	mux.Handle("/test", tracedRoute("POST /test",
 		func(w http.ResponseWriter, r *http.Request) {
 			ctx, span := otel.Tracer("httpA").Start(ctx, "POST /test")
 			defer span.End()
@@ -117,9 +123,9 @@ func (h *HttpA) StartServer(environment, serviceName, version string) {
 
 			_, _ = w.Write([]byte(`post /test happened`))
 			w.WriteHeader(http.StatusOK)
-		})))
+		}))
 
-	mux.Handle(`/try-http2grpc`, otelhttp.WithRouteTag("/try-http2grpc", http.HandlerFunc(
+	mux.Handle(`/try-http2grpc`, tracedRoute("GET /try-http2grpc",
 		func(w http.ResponseWriter, r *http.Request) {
 			ctx, span := otel.Tracer("httpA").Start(ctx, "GET /try-http2grpc")
 			defer span.End()
@@ -149,9 +155,9 @@ func (h *HttpA) StartServer(environment, serviceName, version string) {
 
 			L.Print(`http2grpcB.PostAnything: `, res.GetValue())
 			_, _ = w.Write([]byte(`http2grpcB.PostAnything: ` + res.GetValue()))
-		})))
+		}))
 
-	mux.Handle("/traceparent-check", otelhttp.WithRouteTag("/traceparent-check", http.HandlerFunc(
+	mux.Handle("/traceparent-check", tracedRoute("GET /traceparent-check",
 		func(w http.ResponseWriter, r *http.Request) {
 			ctx, span := otel.Tracer("httpA").Start(ctx, "GET /traceparent-check")
 			defer span.End()
@@ -184,9 +190,7 @@ func (h *HttpA) StartServer(environment, serviceName, version string) {
 				"00-4db6e89b9d0f5cce699ab3bee9022e60-735403388675709d-01"
 				"{"TraceID":"9a8561c47f92b1fdaa4977d4dc9291d3","SpanID":"fd3cdf685296b62b","TraceFlags":"01","TraceState":"","Remote":false}"
 			*/
-		})))
+		}))
 
-	log.Fatal(http.ListenAndServe(":3000", otelhttp.NewHandler(&mux, "server",
-		otelhttp.WithMessageEvents(otelhttp.ReadEvents, otelhttp.WriteEvents),
-	)))
+	log.Fatal(http.ListenAndServe(":3000", &mux))
 }
