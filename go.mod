@@ -1,6 +1,6 @@
 module jeager1
 
-go 1.26.5
+go 1.26.10
 
 require (
 	github.com/kokizzu/gotro v1.6708.1652
